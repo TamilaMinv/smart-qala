@@ -3928,3 +3928,63 @@ nav button:hover {
     animation: none;
   }
 }
+
+
+/* =========================================
+   REJECTED IDEA / REJECTION REASON
+   ========================================= */
+
+.status-badge-rejected {
+  display: inline-block;
+  padding: 8px 13px;
+  background: rgba(255, 100, 100, 0.10);
+  color: #ff8f8f;
+  border: 1px solid rgba(255, 100, 100, 0.35);
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rejection-reason {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: rgba(255, 100, 100, 0.07);
+  color: #ffb0b0;
+  border: 1px solid rgba(255, 100, 100, 0.25);
+  border-radius: 10px;
+  line-height: 1.55;
+}
+
+.government-processing textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 14px;
+
+  background: #071523;
+  color: #ffffff;
+
+  border: 1px solid #344d64;
+  border-radius: 8px;
+
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+
+  resize: vertical;
+}
+
+.government-processing textarea:focus {
+  outline: none;
+  border-color: #42e8b4;
+  box-shadow: 0 0 0 3px rgba(66, 232, 180, 0.08);
+}
+
+.government-processing textarea::placeholder {
+  color: #65798d;
+}
+
+.status-отклонена {
+  background: rgba(255, 100, 100, 0.10);
+  color: #ff8f8f;
+  border-color: rgba(255, 100, 100, 0.35);
+}

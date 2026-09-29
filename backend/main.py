@@ -124,6 +124,7 @@ class IdeaResponse(BaseModel):
     category: str
     status: str
     supporters: int
+    rejection_reason: str | None = None
 
     model_config = {
         "from_attributes": True
@@ -132,6 +133,7 @@ class IdeaResponse(BaseModel):
 
 class StatusUpdate(BaseModel):
     status: str
+    rejection_reason: str | None = None
 
 
 class SupportRequest(BaseModel):
@@ -1042,6 +1044,19 @@ def update_idea_status(
             status_code=404,
             detail="Инициатива не найдена",
         )
+
+    if status_data.status == "Отклонена":
+        rejection_reason = (status_data.rejection_reason or "").strip()
+
+        if not rejection_reason:
+            raise HTTPException(
+                status_code=400,
+                detail="Укажите причину отклонения",
+            )
+
+        idea.rejection_reason = rejection_reason
+    else:
+        idea.rejection_reason = None
 
     idea.status = status_data.status
 

@@ -89,6 +89,11 @@ class Idea(Base):
         default="Получена",
     )
 
+    rejection_reason = Column(
+        Text,
+        nullable=True,
+    )
+
     supporters = Column(
         Integer,
         nullable=False,

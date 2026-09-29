@@ -280,7 +280,18 @@ function Ideas() {
                       {idea.category}
                     </span>
 
-                    <span className="status-badge">
+                    <span
+                      className="status-badge"
+                      style={
+                        idea.status === "Отклонена"
+                          ? {
+                              background: "#fee2e2",
+                              color: "#b91c1c",
+                              border: "1px solid #fecaca",
+                            }
+                          : undefined
+                      }
+                    >
                       {idea.status}
                     </span>
 

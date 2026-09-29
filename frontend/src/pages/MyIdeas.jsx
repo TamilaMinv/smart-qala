@@ -150,7 +150,18 @@ function MyIdeas() {
                   {idea.category}
                 </span>
 
-                <span className="status-badge">
+                <span
+                  className="status-badge"
+                  style={
+                    idea.status === "Отклонена"
+                      ? {
+                          background: "#fee2e2",
+                          color: "#b91c1c",
+                          border: "1px solid #fecaca",
+                        }
+                      : undefined
+                  }
+                >
                   {idea.status}
                 </span>
 
@@ -170,6 +181,24 @@ function MyIdeas() {
               <div className="idea-location">
                 📍 {idea.location}
               </div>
+
+
+              {idea.status === "Отклонена" &&
+                idea.rejection_reason && (
+                  <div
+                    style={{
+                      marginTop: "14px",
+                      padding: "12px 14px",
+                      borderRadius: "10px",
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      color: "#991b1b",
+                    }}
+                  >
+                    <strong>Причина отклонения:</strong>{" "}
+                    {idea.rejection_reason}
+                  </div>
+                )}
 
 
               <div className="idea-card-bottom">

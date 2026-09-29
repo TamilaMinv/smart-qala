@@ -16,6 +16,7 @@ function Government() {
   const [selectedIdea, setSelectedIdea] = useState(null);
 
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const [filter, setFilter] = useState("Все");
 
@@ -62,17 +63,27 @@ function Government() {
   function openIdea(idea) {
     setSelectedIdea(idea);
     setSelectedStatus(idea.status);
+    setRejectionReason(idea.rejection_reason || "");
   }
 
 
   function closeIdea() {
     setSelectedIdea(null);
     setSelectedStatus("");
+    setRejectionReason("");
   }
 
 
   async function saveStatus() {
     if (!selectedIdea) {
+      return;
+    }
+
+    if (
+      selectedStatus === "Отклонена" &&
+      !rejectionReason.trim()
+    ) {
+      setError("Укажите причину отклонения.");
       return;
     }
 
@@ -91,6 +102,10 @@ function Government() {
 
           body: JSON.stringify({
             status: selectedStatus,
+            rejection_reason:
+              selectedStatus === "Отклонена"
+                ? rejectionReason.trim()
+                : null,
           }),
         }
       );
@@ -393,11 +408,14 @@ function Government() {
                 <select
                   id="status"
                   value={selectedStatus}
-                  onChange={(event) =>
-                    setSelectedStatus(
-                      event.target.value
-                    )
-                  }
+                  onChange={(event) => {
+                    const nextStatus = event.target.value;
+                    setSelectedStatus(nextStatus);
+
+                    if (nextStatus !== "Отклонена") {
+                      setRejectionReason("");
+                    }
+                  }}
                 >
 
                   {STATUSES.map((status) => (
@@ -414,6 +432,26 @@ function Government() {
                 </select>
 
               </div>
+
+
+              {selectedStatus === "Отклонена" && (
+                <div className="form-group">
+                  <label htmlFor="rejection-reason">
+                    Причина отклонения
+                  </label>
+
+                  <textarea
+                    id="rejection-reason"
+                    value={rejectionReason}
+                    onChange={(event) =>
+                      setRejectionReason(event.target.value)
+                    }
+                    placeholder="Укажите причину, по которой инициатива отклонена"
+                    rows="4"
+                    required
+                  />
+                </div>
+              )}
 
 
               <button

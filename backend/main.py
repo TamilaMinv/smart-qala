@@ -93,6 +93,10 @@ class EmployeeCreate(BaseModel):
     name: str
     email: str
     password: str
+    department: str
+    government_category: str
+    government_position: str
+    manager_id: int | None = None
 
 
 class UserResponse(BaseModel):
@@ -100,6 +104,10 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str
+    department: str | None = None
+    government_category: str | None = None
+    government_position: str | None = None
+    manager_id: int | None = None
 
     model_config = {
         "from_attributes": True
@@ -125,6 +133,7 @@ class IdeaResponse(BaseModel):
     status: str
     supporters: int
     rejection_reason: str | None = None
+    assigned_to: int | None = None
 
     model_config = {
         "from_attributes": True
@@ -134,6 +143,11 @@ class IdeaResponse(BaseModel):
 class StatusUpdate(BaseModel):
     status: str
     rejection_reason: str | None = None
+
+
+class AssignmentUpdate(BaseModel):
+    manager_id: int
+    employee_id: int
 
 
 class SupportRequest(BaseModel):
@@ -790,11 +804,67 @@ def create_government_employee(
             detail="Пользователь с таким email уже существует",
         )
 
+    department = employee.department.strip()
+    government_category = employee.government_category.strip()
+    government_position = employee.government_position.strip()
+
+    if government_category not in IDEA_CATEGORIES:
+        raise HTTPException(
+            status_code=400,
+            detail="Недопустимая категория госоргана",
+        )
+
+    if government_position not in ["head", "employee"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Недопустимая роль сотрудника",
+        )
+
+    manager_id = None
+
+    if government_position == "employee":
+        if employee.manager_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Для сотрудника выберите руководителя",
+            )
+
+        manager = (
+            db.query(models.User)
+            .filter(
+                models.User.id == employee.manager_id,
+                models.User.role == "government",
+                models.User.government_position == "head",
+            )
+            .first()
+        )
+
+        if manager is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Руководитель не найден",
+            )
+
+        if (
+            manager.government_category != government_category
+            or manager.department != department
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Сотрудник должен относиться к подразделению и категории руководителя",
+            )
+
+        manager_id = manager.id
+
     new_employee = models.User(
         name=name,
         email=email,
         password=employee.password,
         role="government",
+        department=department,
+        government_category=government_category,
+        government_position=government_position,
+        manager_id=manager_id,
     )
 
     db.add(new_employee)
@@ -834,6 +904,164 @@ def delete_government_employee(
     return {
         "message": "Сотрудник удалён"
     }
+
+
+# =====================================================
+# GOVERNMENT HIERARCHY + ASSIGNMENT
+# =====================================================
+
+
+@app.get(
+    "/government/{user_id}/employees",
+    response_model=list[UserResponse],
+)
+def get_department_employees(
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    manager = (
+        db.query(models.User)
+        .filter(
+            models.User.id == user_id,
+            models.User.role == "government",
+            models.User.government_position == "head",
+        )
+        .first()
+    )
+
+    if manager is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Список сотрудников доступен только руководителю подразделения",
+        )
+
+    return (
+        db.query(models.User)
+        .filter(
+            models.User.role == "government",
+            models.User.government_position == "employee",
+            models.User.manager_id == manager.id,
+            models.User.government_category == manager.government_category,
+            models.User.department == manager.department,
+        )
+        .order_by(models.User.name.asc())
+        .all()
+    )
+
+
+@app.get(
+    "/government/{user_id}/ideas",
+    response_model=list[IdeaResponse],
+)
+def get_government_ideas(
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    user = (
+        db.query(models.User)
+        .filter(
+            models.User.id == user_id,
+            models.User.role == "government",
+        )
+        .first()
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Сотрудник госоргана не найден",
+        )
+
+    if not user.government_category:
+        # Совместимость со старым демонстрационным government-аккаунтом:
+        # пока администратор не назначит ему подразделение, список пуст.
+        return []
+
+    query = db.query(models.Idea).filter(
+        models.Idea.category == user.government_category
+    )
+
+    if user.government_position == "employee":
+        query = query.filter(
+            models.Idea.assigned_to == user.id
+        )
+    elif user.government_position != "head":
+        return []
+
+    return query.order_by(models.Idea.id.desc()).all()
+
+
+@app.patch(
+    "/ideas/{idea_id}/assign",
+    response_model=IdeaResponse,
+)
+def assign_idea(
+    idea_id: int,
+    assignment: AssignmentUpdate,
+    db: Session = Depends(get_db),
+):
+    manager = (
+        db.query(models.User)
+        .filter(
+            models.User.id == assignment.manager_id,
+            models.User.role == "government",
+            models.User.government_position == "head",
+        )
+        .first()
+    )
+
+    if manager is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Назначать ответственного может только руководитель подразделения",
+        )
+
+    idea = (
+        db.query(models.Idea)
+        .filter(models.Idea.id == idea_id)
+        .first()
+    )
+
+    if idea is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Инициатива не найдена",
+        )
+
+    if idea.category != manager.government_category:
+        raise HTTPException(
+            status_code=403,
+            detail="Эта инициатива относится к другой категории",
+        )
+
+    employee = (
+        db.query(models.User)
+        .filter(
+            models.User.id == assignment.employee_id,
+            models.User.role == "government",
+            models.User.government_position == "employee",
+            models.User.manager_id == manager.id,
+            models.User.government_category == manager.government_category,
+            models.User.department == manager.department,
+        )
+        .first()
+    )
+
+    if employee is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Можно назначить только сотрудника своего подразделения",
+        )
+
+    idea.assigned_to = employee.id
+
+    if idea.status == "Получена":
+        idea.status = "На рассмотрении"
+
+    db.commit()
+    db.refresh(idea)
+
+    return idea
 
 
 # =====================================================

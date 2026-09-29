@@ -41,6 +41,30 @@ class User(Base):
         nullable=False,
     )
 
+    # Для служебных аккаунтов госорганов.
+    # У жителей и администратора эти поля остаются NULL.
+    department = Column(
+        String(200),
+        nullable=True,
+    )
+
+    government_category = Column(
+        String(100),
+        nullable=True,
+    )
+
+    # head / employee
+    government_position = Column(
+        String(50),
+        nullable=True,
+    )
+
+    manager_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
 
 class Idea(Base):
     __tablename__ = "ideas"
@@ -91,6 +115,12 @@ class Idea(Base):
 
     rejection_reason = Column(
         Text,
+        nullable=True,
+    )
+
+    assigned_to = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
 

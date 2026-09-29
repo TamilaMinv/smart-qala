@@ -29,6 +29,12 @@ function Ideas() {
   ];
 
   const filteredIdeas = ideas.filter((idea) => {
+    // В общем списке публикуются только инициативы со статусом "Получена".
+    // Все дальнейшие этапы видны автору в "Мои идеи" и госоргану.
+    if (idea.status !== "Получена") {
+      return false;
+    }
+
     const query = searchQuery.trim().toLowerCase();
     const matchesSearch =
       !query ||

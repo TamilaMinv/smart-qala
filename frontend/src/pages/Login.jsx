@@ -8,7 +8,7 @@ function Login() {
   // login | register
   const [mode, setMode] = useState("login");
 
-  // resident | government
+  // resident | government | admin
   const [selectedRole, setSelectedRole] =
     useState("resident");
 
@@ -62,9 +62,13 @@ function Login() {
     if (role === "resident") {
       setEmail("resident@smartqala.kz");
       setPassword("resident123");
+    } else if (role === "government") {
+      setEmail("");
+      setPassword("");
     } else {
-      setEmail("government@smartqala.kz");
-      setPassword("government123");
+      // Не подставляем служебные данные администратора.
+      setEmail("");
+      setPassword("");
     }
   }
 
@@ -115,8 +119,14 @@ function Login() {
           );
         }
 
+        if (selectedRole === "government") {
+          throw new Error(
+            "Этот аккаунт не является аккаунтом сотрудника госоргана."
+          );
+        }
+
         throw new Error(
-          "Этот аккаунт не является аккаунтом сотрудника."
+          "Доступ разрешён только администратору системы."
         );
       }
 
@@ -129,6 +139,8 @@ function Login() {
 
       if (data.role === "government") {
         navigate("/government");
+      } else if (data.role === "admin") {
+        navigate("/admin");
       } else {
         navigate("/ideas");
       }
@@ -334,7 +346,8 @@ function Login() {
                 type="button"
                 className={
                   `role-card ${
-                    selectedRole === "government"
+                    selectedRole === "government" ||
+                    selectedRole === "admin"
                       ? "role-card-active"
                       : ""
                   }`
@@ -364,6 +377,35 @@ function Login() {
             </div>
 
 
+            {selectedRole !== "resident" && (
+              <div className="auth-tabs">
+                <button
+                  type="button"
+                  className={
+                    selectedRole === "government"
+                      ? "auth-tab auth-tab-active"
+                      : "auth-tab"
+                  }
+                  onClick={() => selectRole("government")}
+                >
+                  Сотрудник / Руководитель
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    selectedRole === "admin"
+                      ? "auth-tab auth-tab-active"
+                      : "auth-tab"
+                  }
+                  onClick={() => selectRole("admin")}
+                >
+                  Администратор
+                </button>
+              </div>
+            )}
+
+
             <form
               className="login-form"
               onSubmit={handleLogin}
@@ -372,7 +414,9 @@ function Login() {
               <div className="login-form-title">
                 {selectedRole === "resident"
                   ? "Вход для жителя"
-                  : "Вход для сотрудника"}
+                  : selectedRole === "admin"
+                    ? "Вход администратора"
+                    : "Вход для сотрудника / руководителя"}
               </div>
 
 

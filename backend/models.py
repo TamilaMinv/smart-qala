@@ -5,6 +5,9 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     UniqueConstraint,
+    DateTime,
+    Boolean,
+    func,
 )
 from database import Base
 
@@ -130,6 +133,10 @@ class Idea(Base):
         default=0,
     )
 
+    attachment_name = Column(String(255), nullable=True)
+    attachment_type = Column(String(150), nullable=True)
+    attachment_data = Column(Text, nullable=True)
+
 
 class IdeaSupport(Base):
     __tablename__ = "idea_supports"
@@ -158,4 +165,51 @@ class IdeaSupport(Base):
             "user_id",
             name="uq_idea_support_user",
         ),
+    )
+
+class IdeaStatusHistory(Base):
+    __tablename__ = "idea_status_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    idea_id = Column(
+        Integer,
+        ForeignKey("ideas.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    status = Column(String(100), nullable=False)
+    rejection_reason = Column(Text, nullable=True)
+    changed_by = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    idea_id = Column(
+        Integer,
+        ForeignKey("ideas.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, nullable=False, default=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
     )

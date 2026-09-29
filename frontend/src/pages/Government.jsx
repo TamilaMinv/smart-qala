@@ -182,6 +182,7 @@ function Government() {
               selectedStatus === "Отклонена"
                 ? rejectionReason.trim()
                 : null,
+            changed_by: currentUser.id,
           }),
         }
       );
@@ -419,6 +420,23 @@ function Government() {
                 <p>{selectedIdea.category}</p>
               </div>
             </div>
+
+            {selectedIdea.attachment_name && (
+              <div className="modal-section">
+                <span className="modal-section-label">
+                  ВЛОЖЕНИЕ
+                </span>
+                <p>
+                  <a
+                    href={`https://smart-qala-api.onrender.com/ideas/${selectedIdea.id}/attachment`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    📎 {selectedIdea.attachment_name}
+                  </a>
+                </p>
+              </div>
+            )}
 
             <div className="government-processing">
               <h3>Обработка инициативы</h3>

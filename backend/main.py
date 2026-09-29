@@ -1,7 +1,9 @@
 import os
 import json
+import base64
+import binascii
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -120,6 +122,9 @@ class IdeaCreate(BaseModel):
     solution: str
     location: str
     author_id: int
+    attachment_name: str | None = None
+    attachment_type: str | None = None
+    attachment_data: str | None = None
 
 
 class IdeaResponse(BaseModel):
@@ -134,6 +139,8 @@ class IdeaResponse(BaseModel):
     supporters: int
     rejection_reason: str | None = None
     assigned_to: int | None = None
+    attachment_name: str | None = None
+    attachment_type: str | None = None
 
     model_config = {
         "from_attributes": True
@@ -143,6 +150,29 @@ class IdeaResponse(BaseModel):
 class StatusUpdate(BaseModel):
     status: str
     rejection_reason: str | None = None
+    changed_by: int | None = None
+
+
+class StatusHistoryResponse(BaseModel):
+    id: int
+    idea_id: int
+    status: str
+    rejection_reason: str | None = None
+    changed_by: int | None = None
+    created_at: object
+
+    model_config = {"from_attributes": True}
+
+
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: int
+    idea_id: int | None = None
+    message: str
+    is_read: bool
+    created_at: object
+
+    model_config = {"from_attributes": True}
 
 
 class AssignmentUpdate(BaseModel):
@@ -1058,6 +1088,19 @@ def assign_idea(
     if idea.status == "Получена":
         idea.status = "На рассмотрении"
 
+        db.add(models.IdeaStatusHistory(
+            idea_id=idea.id,
+            status="На рассмотрении",
+            changed_by=manager.id,
+        ))
+
+        if idea.author_id:
+            db.add(models.Notification(
+                user_id=idea.author_id,
+                idea_id=idea.id,
+                message=f'Инициатива №{idea.id} принята на рассмотрение.',
+            ))
+
     db.commit()
     db.refresh(idea)
 
@@ -1209,6 +1252,22 @@ def create_idea(
     # Сохраняем инициативу в PostgreSQL
     # -------------------------------------------------
 
+    attachment_data = None
+
+    if idea.attachment_data:
+        try:
+            raw = base64.b64decode(idea.attachment_data, validate=True)
+        except (ValueError, binascii.Error):
+            raise HTTPException(status_code=400, detail="Некорректный файл")
+
+        if len(raw) > 5 * 1024 * 1024:
+            raise HTTPException(
+                status_code=400,
+                detail="Файл должен быть не больше 5 МБ",
+            )
+
+        attachment_data = idea.attachment_data
+
     new_idea = models.Idea(
         author_id=idea.author_id,
         title=idea.title,
@@ -1218,9 +1277,26 @@ def create_idea(
         category=category,
         status="Получена",
         supporters=0,
+        attachment_name=idea.attachment_name,
+        attachment_type=idea.attachment_type,
+        attachment_data=attachment_data,
     )
 
     db.add(new_idea)
+    db.flush()
+
+    db.add(models.IdeaStatusHistory(
+        idea_id=new_idea.id,
+        status="Получена",
+        changed_by=idea.author_id,
+    ))
+
+    db.add(models.Notification(
+        user_id=idea.author_id,
+        idea_id=new_idea.id,
+        message=f'Инициатива №{new_idea.id} успешно отправлена. Статус: «Получена».',
+    ))
+
     db.commit()
     db.refresh(new_idea)
 
@@ -1286,12 +1362,133 @@ def update_idea_status(
     else:
         idea.rejection_reason = None
 
+    status_changed = idea.status != status_data.status
     idea.status = status_data.status
+
+    if status_changed:
+        db.add(models.IdeaStatusHistory(
+            idea_id=idea.id,
+            status=status_data.status,
+            rejection_reason=idea.rejection_reason,
+            changed_by=status_data.changed_by,
+        ))
+
+        if idea.author_id:
+            if status_data.status == "Отклонена":
+                message = (
+                    f'Инициатива №{idea.id} отклонена. '
+                    f'Причина: {idea.rejection_reason}'
+                )
+            else:
+                message = (
+                    f'Статус инициативы №{idea.id} изменён на '
+                    f'«{status_data.status}».'
+                )
+
+            db.add(models.Notification(
+                user_id=idea.author_id,
+                idea_id=idea.id,
+                message=message,
+            ))
 
     db.commit()
     db.refresh(idea)
 
     return idea
+
+
+
+# =====================================================
+# STATUS HISTORY + NOTIFICATIONS + ATTACHMENTS
+# =====================================================
+
+
+@app.get(
+    "/ideas/{idea_id}/history",
+    response_model=list[StatusHistoryResponse],
+)
+def get_idea_history(
+    idea_id: int,
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(models.IdeaStatusHistory)
+        .filter(models.IdeaStatusHistory.idea_id == idea_id)
+        .order_by(models.IdeaStatusHistory.created_at.asc())
+        .all()
+    )
+
+
+@app.get(
+    "/users/{user_id}/notifications",
+    response_model=list[NotificationResponse],
+)
+def get_notifications(
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(models.Notification)
+        .filter(models.Notification.user_id == user_id)
+        .order_by(models.Notification.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+
+@app.patch(
+    "/notifications/{notification_id}/read",
+    response_model=NotificationResponse,
+)
+def mark_notification_read(
+    notification_id: int,
+    db: Session = Depends(get_db),
+):
+    notification = (
+        db.query(models.Notification)
+        .filter(models.Notification.id == notification_id)
+        .first()
+    )
+
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Уведомление не найдено")
+
+    notification.is_read = True
+    db.commit()
+    db.refresh(notification)
+    return notification
+
+
+@app.get("/ideas/{idea_id}/attachment")
+def get_idea_attachment(
+    idea_id: int,
+    db: Session = Depends(get_db),
+):
+    idea = (
+        db.query(models.Idea)
+        .filter(models.Idea.id == idea_id)
+        .first()
+    )
+
+    if idea is None:
+        raise HTTPException(status_code=404, detail="Инициатива не найдена")
+
+    if not idea.attachment_data:
+        raise HTTPException(status_code=404, detail="У инициативы нет вложения")
+
+    try:
+        content = base64.b64decode(idea.attachment_data)
+    except (ValueError, binascii.Error):
+        raise HTTPException(status_code=500, detail="Не удалось прочитать файл")
+
+    safe_name = (idea.attachment_name or "attachment").replace('"', "")
+    return Response(
+        content=content,
+        media_type=idea.attachment_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f'inline; filename="{safe_name}"'
+        },
+    )
 
 
 # =====================================================

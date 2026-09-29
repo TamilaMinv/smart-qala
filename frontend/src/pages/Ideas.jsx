@@ -311,17 +311,9 @@ function Ideas() {
 
                     <span
                       className="status-badge"
-                      style={
-                        idea.status === "Отклонена"
-                          ? {
-                              background: "#fee2e2",
-                              color: "#b91c1c",
-                              border: "1px solid #fecaca",
-                            }
-                          : undefined
-                      }
+
                     >
-                      {idea.status}
+                      Принята
                     </span>
 
                   </div>

@@ -86,6 +86,9 @@ function CreateIdea() {
   const [error, setError] =
     useState("");
 
+  const [attachment, setAttachment] =
+    useState(null);
+
 
   // =====================================================
   // FORM CHANGE
@@ -135,6 +138,14 @@ function CreateIdea() {
     setAiLoading(true);
 
     try {
+
+      if (attachment && attachment.size > 5 * 1024 * 1024) {
+        throw new Error("Файл должен быть не больше 5 МБ.");
+      }
+
+      const attachmentData = attachment
+        ? await fileToBase64(attachment)
+        : null;
 
       const response = await fetch(
         "https://smart-qala-api.onrender.com/ai/chat",
@@ -244,6 +255,23 @@ function CreateIdea() {
 
 
   // =====================================================
+  // ATTACHMENT
+  // =====================================================
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || "");
+        resolve(result.includes(",") ? result.split(",")[1] : result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+
+  // =====================================================
   // SUBMIT IDEA
   // =====================================================
 
@@ -261,6 +289,14 @@ function CreateIdea() {
 
     try {
 
+      if (attachment && attachment.size > 5 * 1024 * 1024) {
+        throw new Error("Файл должен быть не больше 5 МБ.");
+      }
+
+      const attachmentData = attachment
+        ? await fileToBase64(attachment)
+        : null;
+
       const response = await fetch(
         "https://smart-qala-api.onrender.com/ideas",
         {
@@ -277,6 +313,9 @@ function CreateIdea() {
             solution: formData.solution,
             location: formData.location,
             author_id: user.id,
+            attachment_name: attachment?.name || null,
+            attachment_type: attachment?.type || null,
+            attachment_data: attachmentData,
           }),
         }
       );
@@ -646,6 +685,28 @@ function CreateIdea() {
               required
             />
 
+          </div>
+
+
+          <div className="form-group">
+            <label htmlFor="attachment">
+              {language === "kk" ? "Фото немесе файл" : "Фото или файл"}
+            </label>
+
+            <input
+              id="attachment"
+              type="file"
+              accept="image/*,.pdf,.doc,.docx"
+              onChange={(event) =>
+                setAttachment(event.target.files?.[0] || null)
+              }
+            />
+
+            <small style={{ opacity: 0.7 }}>
+              {language === "kk"
+                ? "Қосымша: сурет, PDF немесе құжат, 5 МБ дейін."
+                : "Необязательно: изображение, PDF или документ до 5 МБ."}
+            </small>
           </div>
 
 

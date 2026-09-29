@@ -12,6 +12,38 @@ function Ideas() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+
+  const categories = [
+    "Транспорт",
+    "ЖКХ",
+    "Экология",
+    "Безопасность",
+    "Образование",
+    "Здравоохранение",
+    "Городская инфраструктура",
+    "Цифровые сервисы",
+    "Социальная сфера",
+    "Другое",
+  ];
+
+  const filteredIdeas = ideas.filter((idea) => {
+    const query = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      !query ||
+      idea.title?.toLowerCase().includes(query) ||
+      idea.problem?.toLowerCase().includes(query) ||
+      idea.solution?.toLowerCase().includes(query) ||
+      idea.location?.toLowerCase().includes(query);
+
+    const matchesCategory =
+      selectedCategory === "all" ||
+      idea.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
 
   const savedUser = localStorage.getItem(
     "smartQalaUser"
@@ -211,31 +243,28 @@ function Ideas() {
             type="text"
             placeholder="Поиск инициатив..."
             className="search-input"
+            value={searchQuery}
+            onChange={(event) =>
+              setSearchQuery(event.target.value)
+            }
           />
 
           <select
             className="filter-select"
-            defaultValue="all"
+            value={selectedCategory}
+            onChange={(event) =>
+              setSelectedCategory(event.target.value)
+            }
           >
             <option value="all">
               Все категории
             </option>
 
-            <option value="transport">
-              Транспорт
-            </option>
-
-            <option value="environment">
-              Экология
-            </option>
-
-            <option value="city">
-              Городская среда
-            </option>
-
-            <option value="safety">
-              Безопасность
-            </option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
           </select>
 
         </div>
@@ -259,7 +288,7 @@ function Ideas() {
 
           <div className="ideas-grid">
 
-            {ideas.map((idea) => {
+            {filteredIdeas.map((idea) => {
 
               const isSupported =
                 supportedIdeas[idea.id] === true;

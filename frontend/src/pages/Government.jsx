@@ -30,7 +30,7 @@ function Government() {
       setError("");
 
       const response = await fetch(
-        "http://127.0.0.1:8000/ideas"
+        "https://smart-qala-api.onrender.com/ideas"
       );
 
       if (!response.ok) {
@@ -81,7 +81,7 @@ function Government() {
       setError("");
 
       const response = await fetch(
-        `http://127.0.0.1:8000/ideas/${selectedIdea.id}/status`,
+        `https://smart-qala-api.onrender.com/ideas/${selectedIdea.id}/status`,
         {
           method: "PATCH",
 

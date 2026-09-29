@@ -24,7 +24,7 @@ function Admin() {
       setError("");
 
       const response = await fetch(
-        "http://127.0.0.1:8000/admin/employees"
+        "https://smart-qala-api.onrender.com/admin/employees"
       );
 
       if (!response.ok) {
@@ -64,7 +64,7 @@ function Admin() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/admin/employees",
+        "https://smart-qala-api.onrender.com/admin/employees",
         {
           method: "POST",
 
@@ -126,7 +126,7 @@ function Admin() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/admin/employees/${employee.id}`,
+        `https://smart-qala-api.onrender.com/admin/employees/${employee.id}`,
         {
           method: "DELETE",
         }

@@ -137,7 +137,7 @@ function CreateIdea() {
     try {
 
       const response = await fetch(
-        "http://127.0.0.1:8000/ai/chat",
+        "https://smart-qala-api.onrender.com/ai/chat",
         {
           method: "POST",
 
@@ -262,7 +262,7 @@ function CreateIdea() {
     try {
 
       const response = await fetch(
-        "http://127.0.0.1:8000/ideas",
+        "https://smart-qala-api.onrender.com/ideas",
         {
           method: "POST",
 

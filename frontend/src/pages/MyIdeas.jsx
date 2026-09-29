@@ -32,7 +32,7 @@ function MyIdeas() {
     }
 
     fetch(
-      `http://127.0.0.1:8000/users/${user.id}/ideas`
+      `https://smart-qala-api.onrender.com/users/${user.id}/ideas`
     )
       .then((response) => {
         if (!response.ok) {

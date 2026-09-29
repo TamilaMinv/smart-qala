@@ -26,7 +26,7 @@ function Ideas() {
     async function loadIdeas() {
       try {
         const response = await fetch(
-          "http://127.0.0.1:8000/ideas"
+          "https://smart-qala-api.onrender.com/ideas"
         );
 
         if (!response.ok) {
@@ -47,7 +47,7 @@ function Ideas() {
             data.map(async (idea) => {
               try {
                 const supportResponse = await fetch(
-                  `http://127.0.0.1:8000/ideas/${idea.id}/support/${user.id}`
+                  `https://smart-qala-api.onrender.com/ideas/${idea.id}/support/${user.id}`
                 );
 
                 if (supportResponse.ok) {
@@ -111,7 +111,7 @@ function Ideas() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/ideas/${ideaId}/support`,
+        `https://smart-qala-api.onrender.com/ideas/${ideaId}/support`,
         {
           method: "POST",
 

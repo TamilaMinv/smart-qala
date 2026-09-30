@@ -15,10 +15,10 @@ function Login() {
   const [name, setName] = useState("");
 
   const [email, setEmail] =
-    useState("resident@smartqala.kz");
+    useState("");
 
   const [password, setPassword] =
-    useState("resident123");
+    useState("");
 
   const [confirmPassword, setConfirmPassword] =
     useState("");
@@ -42,12 +42,10 @@ function Login() {
 
     if (newMode === "login") {
       setSelectedRole("resident");
-      setEmail("resident@smartqala.kz");
-      setPassword("resident123");
-    } else {
-      setEmail("");
-      setPassword("");
     }
+
+    setEmail("");
+    setPassword("");
   }
 
 
@@ -59,17 +57,8 @@ function Login() {
     setSelectedRole(role);
     setError("");
 
-    if (role === "resident") {
-      setEmail("resident@smartqala.kz");
-      setPassword("resident123");
-    } else if (role === "government") {
-      setEmail("");
-      setPassword("");
-    } else {
-      // Не подставляем служебные данные администратора.
-      setEmail("");
-      setPassword("");
-    }
+    setEmail("");
+    setPassword("");
   }
 
 
@@ -465,10 +454,6 @@ function Login() {
                   : "Войти в SMART QALA"}
               </button>
 
-
-              <div className="demo-notice">
-                Демонстрационная авторизация для MVP
-              </div>
 
             </form>
 
